@@ -8,13 +8,9 @@ pyanodi was developed to work with continuous variables in 2D, so all the option
 
 ## Installation
 
-First, clone pyanodi:
+You can directly install pyanodi from GitHub using pip:
 
-    git clone https://github.com/grongier/pyanodi.git && cd pyanodi
-
-Then, install it:
-
-    pip install .
+    pip install git+https://github.com/grongier/pyanodi.git
 
 ## Use
 
