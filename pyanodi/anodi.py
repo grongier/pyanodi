@@ -24,7 +24,7 @@
 
 
 import numpy as np
-from numba import jit, prange
+from numba import jit, prange, vectorize, float64
 
 import skimage as ski
 from sklearn.decomposition import PCA
@@ -76,7 +76,7 @@ def compute_mean_differential_entropy_patterns(array, halfwindows, step=(1, 1)):
     image for several pattern sizes
     '''
     mean_entropies = np.zeros(halfwindows.shape[0])
-    for k in prange(halfwindows.shape[0]):
+    for k in range(halfwindows.shape[0]):
         bins = np.max(halfwindows[k])
         for j in range(halfwindows[k, 0], array.shape[0] - halfwindows[k, 0], step[0]):
             for i in range(halfwindows[k, 1], array.shape[1] - halfwindows[k, 1], step[1]):
@@ -140,7 +140,9 @@ def select_template_shape(array, max_halfwindow=None, step=1, return_all=False):
     records the pattern variations from the training image
     '''
     if max_halfwindow is None:
-        max_halfwindow = (int(0.2*array[0]), int(0.2*array.shape[1]))
+        # TODO: Need to find a way to deal with rectangular halfwindows
+        max_halfwindow = np.min(array.shape)
+        max_halfwindow = (int(0.2*max_halfwindow), int(0.2*max_halfwindow))
     if isinstance(step, int):
         step = (step, step)
 
@@ -256,6 +258,70 @@ def assign_clusters(array, prototypes):
                     distances[p] = distance
         
     return clusters
+
+
+@vectorize([float64(float64, float64)])
+def rel_entr(x, y):
+    '''
+    Computes logarithm operations for the Jensen-Shannon distance
+    '''
+    if np.isnan(x) or np.isnan(y):
+        return np.nan
+    elif x > 0 and y > 0:
+        return x*np.log(x / y)
+    elif x == 0 and y >= 0:
+        return 0
+    else:
+        return np.inf
+
+
+@jit(nopython=True)
+def jensen_shannon(p, q, base=None):
+    '''
+    Computes the Jensen-Shannon distance, based on SciPy function
+    distance.jensenshannon, see:
+
+    https://scipy.github.io/devdocs/generated/scipy.spatial.distance.jensenshannon.html
+    '''
+    p = np.asarray(p)
+    q = np.asarray(q)
+    p = p/np.sum(p)
+    q = q/np.sum(q)
+    m = (p + q)/2.0
+    left = rel_entr(p, m)
+    right = rel_entr(q, m)
+    js = np.sum(left) + np.sum(right)
+    if base is not None:
+        js /= np.log(base)
+
+    return np.sqrt(js/2.0)
+
+
+@jit(nopython=True, nogil=True, parallel=True)
+def compute_distances(distances, distribution_ti, distributions_rez, g, nb_methods, nb_rez, verbose):
+    '''
+    Fills a matrix of distances based on the Jensen-Shannon distance between
+    distributions
+    '''
+    if verbose:
+        print('\nComputing distances\n... Within')
+    for j in range(nb_methods*nb_rez):
+        v = int(j/nb_rez)
+        u = int(j%nb_rez)
+        distances[j + 1, 0, g] = jensen_shannon(distributions_rez[v, u],
+                                                distribution_ti)
+        distances[0, j + 1, g] = distances[j + 1, 0, g]
+    if verbose:
+        print('... Between')
+    for j in prange(nb_methods*nb_rez):
+        v = int(j/nb_rez)
+        u = int(j%nb_rez)
+        for i in range(j + 1, nb_methods*nb_rez):
+            z = int(i/nb_rez)
+            w = int(i%nb_rez)
+            distances[j + 1, i + 1, g] = jensen_shannon(distributions_rez[v, u],
+                                                        distributions_rez[z, w])
+            distances[i + 1, j + 1, g] = distances[j + 1, i + 1, g]
 
 ################################################################################
 # ANODI
@@ -462,11 +528,9 @@ class ANODI:
             for j in range(self.nb_methods):
                 for i in range(self.nb_rez):
                     if self.verbose:
-                        print('... method ', j + 1, '/', self.nb_methods,
-                              ', realization ', i + 1, '/', self.nb_rez,
-                              ' '*(len(str(self.nb_methods)) - len(str(j + 1))
-                                   + len(str(self.nb_rez)) - len(str(i + 1))),
-                              sep='', end='\r')
+                        print('... method ' + str(j + 1) + '/' + str(self.nb_methods) \
+                              + ', realization ' + str(i + 1) + '/' + str(self.nb_rez),
+                              end='\r')
                     realization_g = realizations[j, i]
                     if g != 1:
                         out_shape = (int(realization_g.shape[0]/g),
@@ -479,25 +543,13 @@ class ANODI:
                     distributions_rez[j, i] = np.histogram(clusters,
                                                            bins=self.n_clusters)[0]
 
-            if self.verbose:
-                print('\nComputing distances\n... Within')
-            for j in range(self.nb_methods*self.nb_rez):
-                v = int(j/self.nb_rez)
-                u = int(j%self.nb_rez)
-                self.distances_[j + 1, 0, g - self.pyramid[0]] = sdistance.jensenshannon(distributions_rez[v, u],
-                                                                                         distribution_ti)
-                self.distances_[0, j + 1, g - self.pyramid[0]] = self.distances_[j + 1, 0, g - self.pyramid[0]]
-            if self.verbose:
-                print('... Between')
-            for j in range(self.nb_methods*self.nb_rez):
-                v = int(j/self.nb_rez)
-                u = int(j%self.nb_rez)
-                for i in range(j + 1, self.nb_methods*self.nb_rez):
-                    z = int(i/self.nb_rez)
-                    w = int(i%self.nb_rez)
-                    self.distances_[j + 1, i + 1, g - self.pyramid[0]] = sdistance.jensenshannon(distributions_rez[v, u],
-                                                                                                 distributions_rez[z, w])
-                    self.distances_[i + 1, j + 1, g - self.pyramid[0]] = self.distances_[j + 1, i + 1, g - self.pyramid[0]]
+            compute_distances(self.distances_,
+                              distribution_ti,
+                              distributions_rez, 
+                              g - self.pyramid[0],
+                              self.nb_methods,
+                              self.nb_rez,
+                              self.verbose)
             if self.verbose:
                 print('\n', end='')
 

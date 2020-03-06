@@ -38,7 +38,7 @@ anodi.fit_transform(training_image, realizations)
 
 # Get the MDS representation of the distances between the images
 pyramid_level = 0
-mds = MDS(n_components=2)
+mds = MDS(n_components=2, dissimilarity='precomputed', random_state=100)
 mds_points = mds.fit_transform(anodi.distances_[..., pyramid_level])
 
 # Get the rankings of the methods
