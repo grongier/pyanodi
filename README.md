@@ -1,10 +1,10 @@
 # pyanodi
 
-pyanodi is a Python package to perform the analysis of distance designed by [Tan et al. (2014)](https://doi.org/10.1007/s11004-013-9482-1) to compare geostatistical simulation algorithms.
+Pyanodi is a Python package to perform the analysis of distance designed by [Tan et al. (2014)](https://doi.org/10.1007/s11004-013-9482-1) to compare geostatistical simulation algorithms.
 
 ## Disclaimer
 
-pyanodi was developed to work with continuous variables in 2D, so all the options mentioned in the paper haven't been implemented. It can only handle 2D images for now, and contains the cluster-based histograms of patterns but not the multiple-point histograms.
+Pyanodi was developed to work with continuous variables in 2D, so all the options mentioned in the paper haven't been implemented. It can only handle 2D images for now, and contains the cluster-based histograms of patterns but not the multiple-point histograms.
 
 ## Installation
 
@@ -13,6 +13,8 @@ You can directly install pyanodi from GitHub using pip:
     pip install git+https://github.com/grongier/pyanodi.git
 
 ## Use
+
+Basic use:
 
 ```
 from pyanodi import ANODI
@@ -44,6 +46,8 @@ mds_points = mds.fit_transform(anodi.distances_[..., pyramid_level])
 # Get the rankings of the methods
 anodi.score()
 ```
+
+For a more complete example, see the Jupyter notebook [methods_comparison.ipynb](examples/methods_comparison.ipynb).
 
 ## Citation
 

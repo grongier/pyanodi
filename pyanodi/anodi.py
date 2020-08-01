@@ -1,7 +1,7 @@
 """Analysis of distance (ANODI)"""
 
 # The MIT License (MIT)
-# Copyright (c) 2019 Guillaume Rongier
+# Copyright (c) 2019-2020 Guillaume Rongier
 #
 # Author: Guillaume Rongier
 #
@@ -26,7 +26,7 @@
 import numpy as np
 from numba import jit, prange, vectorize, float64
 
-import skimage as ski
+import skimage.transform
 from sklearn.decomposition import PCA
 from sklearn.manifold import MDS
 from scipy.spatial import distance as sdistance
@@ -41,7 +41,7 @@ from .kernel_k_means import *
 @jit(nopython=True)
 def get_patterns(array, halfwindow, step=(1, 1)):
     '''
-    Gets the patterns from the training image
+    Gets the patterns from the training image.
     '''
     patterns = np.empty((int(np.ceil((array.shape[0] - 2*halfwindow[0])/step[0])
                              *np.ceil((array.shape[1] - 2*halfwindow[1])/step[1])),
@@ -60,7 +60,7 @@ def get_patterns(array, halfwindow, step=(1, 1)):
 @jit(nopython=True)
 def compute_differential_entropy(samples, bins):
     '''
-    Computes the differential entropy for a set of samples
+    Computes the differential entropy for a set of samples.
     '''
     hist, bin_edges = np.histogram(samples, bins=bins)
     hist = hist/np.sum(hist)
@@ -73,7 +73,7 @@ def compute_differential_entropy(samples, bins):
 def compute_mean_differential_entropy_patterns(array, halfwindows, step=(1, 1)):
     '''
     Computes the mean differential entropy of all the patterns from the training
-    image for several pattern sizes
+    image for several pattern sizes.
     '''
     mean_entropies = np.zeros(halfwindows.shape[0])
     for k in range(halfwindows.shape[0]):
@@ -91,14 +91,14 @@ def compute_mean_differential_entropy_patterns(array, halfwindows, step=(1, 1)):
 
 def compute_forward_second_difference(samples):
     '''
-    Computes the forward second difference for a set of samples
+    Computes the forward second difference for a set of samples.
     '''
     return samples[2:] - 2*samples[1:-1] + samples[:-2]
 
 
 def compute_log_gaussian(samples, mean, var):
     '''
-    Computes the log of a gaussian distribution for a set of samples
+    Computes the log of a gaussian distribution for a set of samples.
     '''
     return len(samples)*np.log(1/np.sqrt(2*np.pi*var))\
            - np.sum(((samples - mean)**2)/(2*var))
@@ -106,7 +106,7 @@ def compute_log_gaussian(samples, mean, var):
 
 def compute_profile_log_likelihood(samples, common_scale=False):
     '''
-    Computes the profile log-likelihood of a set of samples
+    Computes the profile log-likelihood of a set of samples.
     '''
     start = 2
     stop = len(samples) - 1
@@ -137,7 +137,7 @@ def compute_profile_log_likelihood(samples, common_scale=False):
 def select_template_shape(array, max_halfwindow=None, step=1, return_all=False):
     '''
     Selects the template shape using the elbow plot so that the template size
-    records the pattern variations from the training image
+    records the pattern variations from the training image.
     '''
     if max_halfwindow is None:
         # TODO: Need to find a way to deal with rectangular halfwindows
@@ -165,7 +165,7 @@ def find_reducing_dimensions(samples,
                              random_state=None):
     '''
     Finds the number of components for dimensionality reduction using the elbow
-    plot so that as much information as possible is preserved
+    plot so that as much information as possible is preserved.
     '''
     reducing = PCA(random_state=random_state)
     samples_reduced = reducing.fit_transform(samples)
@@ -181,7 +181,7 @@ def find_reducing_dimensions(samples,
 @jit(nopython=True)
 def find_medoid(samples):
     '''
-    Finds the medoid pattern from a set of patterns
+    Finds the medoid pattern from a set of patterns.
     '''
     distances = np.zeros(samples.shape[0])
     for i in range(samples.shape[0]):
@@ -198,7 +198,7 @@ def find_medoid(samples):
 @jit(nopython=True)
 def compute_mean_pattern(patterns):
     '''
-    Computes the mean pattern from a set of patterns
+    Computes the mean pattern from a set of patterns.
     '''
     mean_pattern = np.zeros(patterns.shape[1:])
     for k in range(patterns.shape[0]):
@@ -212,7 +212,7 @@ def compute_mean_pattern(patterns):
 @jit(nopython=True, nogil=True, parallel=True)
 def compute_cluster_prototypes(patterns, clusters, method='mean'):
     '''
-    Computes the prototype of the patterns from each cluster
+    Computes the prototype of the patterns from each cluster.
     '''
     if method != 'mean' and method != 'medoid':
         raise ValueError('''Method must be 'mean' or 'medoid' ''')
@@ -233,7 +233,7 @@ def compute_cluster_prototypes(patterns, clusters, method='mean'):
 def assign_clusters(array, prototypes):
     '''
     Assigns the patterns of a realization to a cluster based on the Euclidean
-    distance to the pattern prototypes computed from the training image
+    distance to the pattern prototypes computed from the training image.
     '''
     halfwindow = (int(prototypes.shape[1]/2), int(prototypes.shape[2]/2))
     n = (array.shape[0] - 2*halfwindow[0])*(array.shape[1] - 2*halfwindow[1])
@@ -263,7 +263,7 @@ def assign_clusters(array, prototypes):
 @vectorize([float64(float64, float64)])
 def rel_entr(x, y):
     '''
-    Computes logarithm operations for the Jensen-Shannon distance
+    Computes logarithm operations for the Jensen-Shannon distance.
     '''
     if np.isnan(x) or np.isnan(y):
         return np.nan
@@ -301,7 +301,7 @@ def jensen_shannon(p, q, base=None):
 def compute_distances(distances, distribution_ti, distributions_rez, g, nb_methods, nb_rez, verbose):
     '''
     Fills a matrix of distances based on the Jensen-Shannon distance between
-    distributions
+    distributions.
     '''
     if verbose:
         print('\nComputing distances\n... Within')
@@ -329,12 +329,12 @@ def compute_distances(distances, distribution_ti, distributions_rez, g, nb_metho
 
 class ANODI:
     '''
-    Analysis of distance (ANODI)
+    Analysis of distance (ANODI).
     
     Parameters
     ----------
     
-    pyramid : array-like (default (1, 2, 3, 4, 5, 6, 7, 8, 9, 10) )
+    pyramid : int or array-like (default (1, 2, 3, 4, 5, 6, 7, 8, 9, 10) )
         Scaling coefficients for multiscale analysis.
         
     halfwindow : int or array-like, optional (default None)
@@ -357,7 +357,11 @@ class ANODI:
         done using a PCA, if True, it is done using the MDS method SMACOF. The
         original code uses the classical MDS method with the Euclidean distance
         to process continuous variables, which is equivalent to a PCA but far
-        less efficient computationaly.
+        less computationally efficient.
+
+    kmeans_params : dict (default None)
+        Parameters to pass to the kernel k-means used to compute the pattern
+        prototypes.
         
     method : str (default 'mean')
         Method to compute the pattern prototype for each cluster, either 'mean'
@@ -400,17 +404,21 @@ class ANODI:
                  max_halfwindow=None,
                  n_clusters=48,
                  step=1,
-                 use_mds=True,
+                 use_mds=False,
+                 kmeans_params=None,
                  method='mean',
                  verbose=True,
                  random_state=None,
                  n_jobs=None):
         self.pyramid = pyramid
+        if isinstance(pyramid, int):
+            self.pyramid = [pyramid]
         self.halfwindow = halfwindow
         self.max_halfwindow = max_halfwindow
         self.n_clusters = n_clusters
         self.step = step
         self.use_mds = use_mds
+        self.kmeans_params = {} if kmeans_params is None else kmeans_params
         self.method = method
         self.verbose = verbose
         self.random_state = random_state
@@ -418,7 +426,7 @@ class ANODI:
         
     def _cluster_training_image(self, ti_patterns):
         '''
-        Computes the clusters from the patterns of the training image
+        Computes the clusters from the patterns of the training image.
         '''
         if self.verbose:
             print('... ... Finding number of dimensions using PCA')
@@ -433,14 +441,15 @@ class ANODI:
             if self.verbose:
                 print('... ... Reducing dimensions using MDS')
             reducing = MDS(n_components=nb_components,
-                           n_jobs=n_jobs,
-                           random_state=random_state,
+                           n_jobs=self.n_jobs,
+                           random_state=self.random_state,
                            dissimilarity='euclidean')
             ti_patterns_reduced = reducing.fit_transform(ti_patterns.reshape((ti_patterns.shape[0], -1)))
 
         if self.verbose:
             print('... ... Clustering patterns using kernel K-means')
         clustering = KernelKMeans(n_clusters=self.n_clusters,
+                                  **self.kmeans_params,
                                   random_state=self.random_state)
         clustering.fit(ti_patterns_reduced)
 
@@ -449,7 +458,7 @@ class ANODI:
     def _fit(self, training_image):
         '''
         Extracts the patterns from the training image, computes the clusters
-        from the patterns, and computes the pattern prototypes for each cluster
+        from the patterns, and computes the pattern prototypes for each cluster.
         '''
         if isinstance(self.step, int):
             self.step = (self.step, self.step)
@@ -472,11 +481,12 @@ class ANODI:
         ti_clusters = self._cluster_training_image(ti_patterns)
         if self.verbose:
             print('''... Computing clusters' prototypes''')
-        self.prototypes_ = compute_cluster_prototypes(ti_patterns,
-                                                      ti_clusters,
-                                                      method=self.method)
+        prototypes = compute_cluster_prototypes(ti_patterns,
+                                                ti_clusters,
+                                                method=self.method)
+        distribution_ti = np.histogram(ti_clusters, bins=self.n_clusters)[0]
         
-        return np.histogram(ti_clusters, bins=self.n_clusters)[0]
+        return distribution_ti, prototypes
 
     def fit_transform(self,
                       training_image,
@@ -484,7 +494,7 @@ class ANODI:
         '''
         Computes the histograms of patterns for the training image and the
         realizations, and the Jensen-Shannon distance between all those
-        histograms, for each pyramid level
+        histograms, for each pyramid level.
         
         Parameters
         ----------
@@ -500,6 +510,7 @@ class ANODI:
         self.nb_rez = realizations.shape[1]
         self.nb_grids = len(self.pyramid)
         
+        self.prototypes_ = {}
         self.distances_ = np.zeros((1 + self.nb_methods*self.nb_rez,
                                     1 + self.nb_methods*self.nb_rez,
                                     self.nb_grids))
@@ -513,12 +524,12 @@ class ANODI:
             if g != 1:
                 out_shape = (int(training_image.shape[0]/g),
                              int(training_image.shape[1]/g))
-                training_image_g = ski.transform.resize(training_image,
-                                                        out_shape,
-                                                        order=3,
-                                                        anti_aliasing=False)
+                training_image_g = skimage.transform.resize(training_image,
+                                                            out_shape,
+                                                            order=3,
+                                                            anti_aliasing=False)
         
-            distribution_ti = self._fit(training_image_g)
+            distribution_ti, self.prototypes_[g] = self._fit(training_image_g)
             distributions_rez = np.empty((self.nb_methods,
                                           self.nb_rez,
                                           self.n_clusters))
@@ -529,17 +540,18 @@ class ANODI:
                 for i in range(self.nb_rez):
                     if self.verbose:
                         print('... method ' + str(j + 1) + '/' + str(self.nb_methods) \
-                              + ', realization ' + str(i + 1) + '/' + str(self.nb_rez),
+                              + ', realization ' + str(i + 1) + '/' + str(self.nb_rez) \
+                              + ' '*len(str(self.nb_methods) + str(self.nb_rez)),
                               end='\r')
                     realization_g = realizations[j, i]
                     if g != 1:
                         out_shape = (int(realization_g.shape[0]/g),
                                      int(realization_g.shape[1]/g))
-                        realization_g = ski.transform.resize(realizations[j, i],
-                                                             out_shape,
-                                                             order=3,
-                                                             anti_aliasing=False)
-                    clusters = assign_clusters(realization_g, self.prototypes_)
+                        realization_g = skimage.transform.resize(realizations[j, i],
+                                                                 out_shape,
+                                                                 order=3,
+                                                                 anti_aliasing=False)
+                    clusters = assign_clusters(realization_g, self.prototypes_[g])
                     distributions_rez[j, i] = np.histogram(clusters,
                                                            bins=self.n_clusters)[0]
 
@@ -557,7 +569,7 @@ class ANODI:
     
     def score(self):
         '''
-        Returns the ranking of the different methods that produced the realizations
+        Returns the ranking of the different methods that produced the realizations.
         
         Returns
         -------
@@ -565,7 +577,7 @@ class ANODI:
         rankings : dict
             Ranking for the between-realization variability (space of uncertainty),
             ranking for the within-realization variability, (reproduction the target statistics,
-            i.e., the training image), and total ranking
+            i.e., the training image), and total ranking.
         '''
         distance_between = np.empty((self.nb_methods, self.nb_grids))
         for j in range(self.nb_methods):
@@ -576,7 +588,7 @@ class ANODI:
             for i in range(self.nb_grids):
                 distance_within[j, i] = np.mean(self.distances_[0, 1 + self.nb_rez*j:1 + self.nb_rez*(j + 1), i])
  
-        weights = np.array([1/2**i for i in range(self.nb_grids)])
+        weights = np.array([1/2**i for i in range(1, self.nb_grids + 1)])
         ranking_between = np.empty((self.nb_methods, self.nb_methods))
         for j in range(self.nb_methods):
             for i in range(self.nb_methods):
