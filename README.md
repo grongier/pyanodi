@@ -25,14 +25,7 @@ realizations = ...   # array of shape (n_methods, n_realizations_per_method, n_c
 
 # Set the parameters
 anodi = ANODI(pyramid=(1, 2, 3),
-              halfwindow=15,
-              max_halfwindow=None,
-              n_clusters=48,
-              step=2,
-              use_mds=False,
-              method='mean',
-              verbose=True,
-              random_state=100,
+              random_state=42,
               n_jobs=4)
 
 # Perform the analysis
