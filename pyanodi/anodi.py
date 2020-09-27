@@ -377,7 +377,7 @@ class ANODI:
         If None, the random number generator is the RandomState instance used by
         'np.random'.
         
-    n_jobs : None (default True)
+    n_jobs : int (default None)
         Number of jobs to use for the computation.
         
     Attributes
