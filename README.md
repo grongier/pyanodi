@@ -2,9 +2,11 @@
 
 Pyanodi is a Python package to perform the analysis of distance designed by [Tan et al. (2014)](https://doi.org/10.1007/s11004-013-9482-1) to compare geostatistical simulation algorithms.
 
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/grongier/pyanodi/master?filepath=examples%2Fmethods_comparison.ipynb)
+
 ## Disclaimer
 
-Pyanodi was developed to work with continuous variables in 2D, so all the options mentioned in the paper haven't been implemented. It can only handle 2D images for now, and contains the cluster-based histograms of patterns but not the multiple-point histograms.
+Pyanodi only contains the cluster-based histograms of patterns but not the multiple-point histograms.
 
 ## Installation
 
@@ -20,8 +22,8 @@ Basic use:
 from pyanodi import ANODI
 from sklearn.manifold import MDS
 
-training_image = ... # array of shape (n_cells_ti_y, n_cells_ti_x)
-realizations = ...   # array of shape (n_methods, n_realizations_per_method, n_cells_y, n_cells_x)
+training_image = ... # nD array
+realizations = ...   # (n_methods, n_realizations_per_method, nD) array
 
 # Set the parameters
 anodi = ANODI(pyramid=(1, 2, 3),
@@ -40,13 +42,13 @@ mds_points = mds.fit_transform(anodi.distances_[..., pyramid_level])
 anodi.score()
 ```
 
-For a more complete example, see the Jupyter notebook [methods_comparison.ipynb](examples/methods_comparison.ipynb).
+For a more complete example, see the Jupyter notebook [methods_comparison.ipynb](examples/methods_comparison.ipynb) or the Binder link above.
 
 ## Citation
 
 If you use pyanodi in your research, please cite the original article:
 
-> Tan, X., Tahmasebi, P. & Caers, J. (2014). Comparing Training-Image Based Algorithms Using an Analysis of Distance. *Mathematical Geosciences*, 46(2), 149-169. doi:10.1007/s11004-013-9482-1
+> Tan, X., Tahmasebi, P. & Caers, J. (2014). Comparing Training-Image Based Algorithms Using an Analysis of Distance. *Mathematical Geosciences*, 46(2), 149-169. doi:[10.1007/s11004-013-9482-1](https://doi.org/10.1007/s11004-013-9482-1)
 
 Here is the corresponding BibTex entry if you use LaTex:
 

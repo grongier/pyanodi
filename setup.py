@@ -39,7 +39,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='pyanodi',
-    version='v0.0.1',
+    version='v0.0.2',
     description='Python package to perform an analysis of distance',
     long_description=long_description,
     long_description_content_type='text/markdown',

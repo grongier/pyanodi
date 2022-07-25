@@ -1,0 +1,14 @@
+name: pyanodi
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python
+  - numpy
+  - scipy
+  - numba
+  - scikit-image
+  - scikit-learn
+  - matplotlib

@@ -1,7 +1,7 @@
 """Kernel k-means clustering"""
 
 # The MIT License (MIT)
-# Copyright (c) 2019-2020 Guillaume Rongier
+# Copyright (c) 2019-2022 Guillaume Rongier
 #
 # Author: Guillaume Rongier
 #
@@ -24,22 +24,20 @@
 
 
 import numpy as np
-from numba import jit, prange
-
+import numba as nb
 from sklearn.utils import check_random_state
 
 
 ################################################################################
 # Utils
 
-
-@jit(nopython=True, nogil=True, parallel=True)
+@nb.jit(nopython=True, nogil=True, parallel=True)
 def square_euclidean_distance(samples_1, samples_2):
-    '''
+    """
     Computes the squared Euclidean distance between two sets of samples.
-    '''
+    """
     distance_matrix = np.zeros((samples_1.shape[0], samples_2.shape[0]))
-    for j in prange(samples_1.shape[0]):
+    for j in nb.prange(samples_1.shape[0]):
         for i in range(j + 1, samples_2.shape[0]):
             for v in range(samples_1.shape[1]):
                 distance_matrix[j, i] += (samples_1[j, v] - samples_2[i, v])**2
@@ -48,22 +46,20 @@ def square_euclidean_distance(samples_1, samples_2):
 
     return distance_matrix
 
+
 ################################################################################
 # Kernels
 
-
 class GaussianKernel:
-    '''
+    """
     Computes the Gaussian kernel of the matrix of pairwise Euclidean distance
     between the samples.
 
     Parameters
     ----------
-    
-    gamma : float (default None)
+    gamma : float, optional
         Coefficient of the Gaussian kernel.
-
-    '''
+    """
     def __init__(self, gamma=None):
         
         self.gamma = gamma
@@ -79,44 +75,37 @@ class GaussianKernel:
 
         return np.exp(-gamma*kernel_matrix)
 
+
 ################################################################################
 # Kernel k-means
 
-
 class KernelKMeans:
-    '''
+    """
     Kernel k-means clustering.
     
     Parameters
     ----------
-        
-    n_clusters : int (default 2)
+    n_clusters : int, optional
         Number of clusters to form.
-        
-    init : string (default 'random')
+    init : {'random', 'k-means++'}, optional
         Method to initialize the labels, either 'random' or 'k-means++'.
         k-means++ is a method to improve convergence. It is not the default
         option to stay closer to the original ANODI implementation.
-        
-    n_init : int (default 300)
+    n_init : int, optional
         Number of times the clustering is applied with different seeds, the
         final result being the one with the lowest inertia.
-        
-    max_iter : int (default 300)
+    max_iter : int, optional
         Maximum number of iterations of the k-means algorithm.
-        
-    kernel : kernel object or function, ndarray, or None (default GaussianKernel())
+    kernel : kernel object or function, ndarray, or None, optional
         Kernel to compute the kernel matrix from the data. If a kernel object,
         it must have a __call__ function with a single argument (the data) that
         returns a ndarray (the kernel matrix). A kernel function must fit the
         same input and output. An ndarray must be a kernel matrix. None means
         that a normal k-means is used.
-        
-    verbose : bool (default True)
+    verbose : bool, optional
         If True, print information about the successive steps, if False, nothing
         is printed.
-        
-    random_state : int or RandomState instance, optional (default None)
+    random_state : int or RandomState instance, optional
         If int, random_state is the seed used by the random number generator;
         If RandomState instance, random_state is the random number generator;
         If None, the random number generator is the RandomState instance used by
@@ -124,25 +113,20 @@ class KernelKMeans:
         
     Attributes
     ----------
-    
     labels_ : array, shape (n_samples)
         Store the label of the cluster associated to each sample.
     
     References
     ----------
-    
     Based on the following MATLAB implementation:
-    https://github.com/xtan1/comparingGSalgorithms/blob/f02c20f3f163e87b35ecdb90d3f42e4a7e7fa10b/dualkmeansFast.m
-
+        https://github.com/xtan1/comparingGSalgorithms/blob/f02c20f3f163e87b35ecdb90d3f42e4a7e7fa10b/dualkmeansFast.m
     Shawe-Taylor, J. & Cristianini, N. (2011).
-    Kernel Methods for Pattern Analysis.
-    Cambridge University Press, https://doi.org/10.1017/CBO9780511809682
-
+        Kernel Methods for Pattern Analysis.
+        Cambridge University Press, https://doi.org/10.1017/CBO9780511809682
     Arthur, D. & Vassilvitskii, S. (2007).
-    k-means++: the advantages of careful seeding.
-    Proceedings of the eighteenth annual ACM-SIAM symposium on Discrete algorithms, 1027–1035
-    
-    '''
+        k-means++: the advantages of careful seeding.
+        Proceedings of the eighteenth annual ACM-SIAM symposium on Discrete algorithms, 1027–1035
+    """
     def __init__(self,
                  n_clusters=2,
                  init='random',
@@ -160,9 +144,9 @@ class KernelKMeans:
         self.random_state = random_state
         
     def _initialize(self, matrix, random_state):
-        '''
+        """
         Initializes the labels at random or using the k-means++ method
-        '''
+        """
         if random_state is None:
             random_state = check_random_state(self.random_state)
         else:
@@ -189,9 +173,9 @@ class KernelKMeans:
             return random_state.randint(self.n_clusters, size=n)
     
     def _fit_single(self, kernel_matrix, init_labels):
-        '''
+        """
         Computes the kernel k-means clustering for a single initialization
-        '''
+        """
         labels = init_labels
         n = kernel_matrix.shape[0]
         cluster_matrix = np.zeros((n, self.n_clusters))
@@ -228,15 +212,14 @@ class KernelKMeans:
         return labels, inertia, it
     
     def fit(self, X):
-        '''
+        """
         Computes the kernel k-means clustering
         
         Parameters
         ----------
-        
         X : array, shape (n_samples, n_features)
             Training instances to cluster.
-        '''
+        """
         random_state = check_random_state(self.random_state)
         
         self.labels_ = None
