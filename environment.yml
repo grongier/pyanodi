@@ -6,9 +6,12 @@ channels:
 
 dependencies:
   - python
+  - pip
   - numpy
   - scipy
   - numba
   - scikit-image
   - scikit-learn
   - matplotlib
+  - pip:
+    - git+https://github.com/grongier/pyanodi.git

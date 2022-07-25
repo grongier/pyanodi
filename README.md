@@ -2,7 +2,7 @@
 
 Pyanodi is a Python package to perform the analysis of distance designed by [Tan et al. (2014)](https://doi.org/10.1007/s11004-013-9482-1) to compare geostatistical simulation algorithms.
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/grongier/pyanodi/master?filepath=examples%2Fmethods_comparison.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/grongier/pyanodi/master?filepath=examples)
 
 ## Disclaimer
 
